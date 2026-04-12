@@ -284,7 +284,7 @@ body::after{
   flex:1;display:flex;flex-direction:column;
   justify-content:space-between;
   padding:12px 14px 10px;gap:5px;
-  position:relative;z-index:1;overflow:hidden;
+  position:relative;overflow:hidden;
 }
 #table::before{
   content:'';position:absolute;inset:6px;pointer-events:none;z-index:0;
@@ -311,12 +311,14 @@ body::after{
 
 .slot{
   width:48px;height:66px;border-radius:var(--r);
-  border:1.5px solid rgba(200,190,180,.3);
+  border:none;
+  outline:1.5px solid rgba(200,190,180,.3);
+  outline-offset:-1.5px;
   background:var(--chalk);
   position:relative;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
   box-shadow:inset 0 2px 4px rgba(255,255,255,.9),inset 0 -1px 2px rgba(46,42,38,.06),var(--shadow-sm);
-  transition:border-color .2s,box-shadow .2s,background .2s;
+  transition:outline-color .2s,box-shadow .2s,background .2s;
 }
 .slbl{
   font-family:'Cormorant Garamond',serif;
@@ -324,11 +326,22 @@ body::after{
   pointer-events:none;
 }
 .slot.ok{
-  border-color:var(--terra);
+  outline-color:var(--terra);
   box-shadow:0 0 0 2.5px rgba(184,92,56,.28),inset 0 2px 4px rgba(255,255,255,.9);
   background:#fdf6f3;
 }
-.slot.filled{border-color:var(--linen-d);background:var(--linen);box-shadow:inset 0 1px 3px rgba(46,42,38,.06),var(--shadow-sm);}
+/* slot alvo — brilho dourado suave */
+.slot.target{
+  outline-color:rgba(200,160,40,.6);
+  outline-width:2px;
+  background:#fefbf0;
+  animation:goldPulse 2s ease-in-out infinite;
+}
+@keyframes goldPulse{
+  0%,100%{ outline-color:rgba(200,160,40,.45); box-shadow:0 0 6px 1px rgba(200,160,40,.2), inset 0 2px 4px rgba(255,255,255,.9); }
+  50%    { outline-color:rgba(200,160,40,.75); box-shadow:0 0 12px 3px rgba(200,160,40,.38), inset 0 2px 4px rgba(255,255,255,.9); }
+}
+.slot.filled{outline-color:var(--linen-d);background:var(--linen);box-shadow:inset 0 1px 3px rgba(46,42,38,.06),var(--shadow-sm);}
 
 .card{
   width:48px;height:66px;border-radius:var(--r);
@@ -565,6 +578,68 @@ body::after{
 }
 .toss-continue.show{opacity:1;pointer-events:auto;}
 .toss-continue:hover{transform:translateY(-1px);}
+
+/* ═══════════════════════════════
+   RESPONSIVO MOBILE
+═══════════════════════════════ */
+@media (max-width: 500px){
+  :root{
+    --cw: clamp(32px, calc((100vw - 28px) / 5), 48px);
+    --ch: calc(var(--cw) * 1.375);
+    --gap-row: clamp(2px, 1vw, 5px);
+  }
+
+  /* cartas e slots escalam juntos */
+  .slot{
+    width:var(--cw) !important;
+    height:var(--ch) !important;
+  }
+  .card{
+    width:var(--cw) !important;
+    height:var(--ch) !important;
+  }
+  .deck-pile{
+    width:var(--cw) !important;
+    height:var(--ch) !important;
+  }
+  .deck-pile::before,.deck-pile::after{
+    width:var(--cw) !important;
+    height:var(--ch) !important;
+  }
+  #disc{
+    width:var(--cw) !important;
+    height:var(--ch) !important;
+  }
+  #hand-card-wrap{
+    width:var(--cw) !important;
+    height:var(--ch) !important;
+  }
+
+  /* gaps entre cartas */
+  .row{ gap:var(--gap-row); }
+  #center{ gap:clamp(4px, 2vw, 12px); padding:0; }
+
+  /* fontes das cartas escalam */
+  .csb{ font-size:clamp(11px, 4vw, 19px); }
+  .cc { font-size:clamp(6px, 1.8vw, 10px); }
+  .slbl{ font-size:clamp(9px, 2.5vw, 14px); }
+  .back-mark{ font-size:clamp(5px, 1.4vw, 8.5px); letter-spacing:.08em; }
+
+  /* scores e labels */
+  .scv{ font-size:clamp(16px, 5vw, 26px); }
+  .scl{ font-size:clamp(5px, 1.5vw, 7px); }
+  .plbl{ font-size:clamp(5px, 1.5vw, 7px); }
+  .zlbl{ font-size:clamp(5px, 1.5vw, 7.5px); }
+
+  /* mensagem */
+  #msg{ font-size:clamp(7px, 2vw, 9px); min-width:0; padding:5px 10px; }
+
+  /* padding do tabuleiro */
+  #table{ padding:8px 8px 6px; gap:3px; }
+
+  /* conta do monte */
+  .deck-pile-count{ font-size:7px; bottom:-13px; }
+}
 </style>
 </head>
 <body data-theme="delft">
@@ -800,7 +875,7 @@ class Player{
   }
 
   _clearHi(){
-    Object.values(this.slots).forEach(i=>i.el.classList.remove('ok'));
+    Object.values(this.slots).forEach(i=>{ i.el.classList.remove('ok'); i.el.classList.remove('target'); });
   }
 }
 
@@ -989,7 +1064,7 @@ const G={
 
   _cpuPlay(v,s){
     const shown=mkCard(v,s,false);
-    shown.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.3);pointer-events:none;';
+    shown.style.cssText='position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.3);pointer-events:none;';
     document.body.appendChild(shown);
 
     setTimeout(()=>{
@@ -1059,8 +1134,12 @@ const G={
       document.getElementById('disc').classList.remove('ok');
       if(mode==='play'){
         const tgt=this.p.slots[v];
-        if(tgt && !tgt.done) tgt.el.classList.add('ok');
-        else document.getElementById('disc').classList.add('ok');
+        if(tgt && !tgt.done){
+          tgt.el.classList.add('ok');
+          tgt.el.classList.add('target');
+        } else {
+          document.getElementById('disc').classList.add('ok');
+        }
       } else {
         document.getElementById('disc').classList.add('ok');
       }
@@ -1073,7 +1152,9 @@ const G={
       const r=card.getBoundingClientRect();
       ox=e.clientX-r.left; oy=e.clientY-r.top;
       card.classList.add('drag');
-      card.style.cssText=`position:fixed;width:48px;height:66px;left:${e.clientX-ox}px;top:${e.clientY-oy}px;z-index:9999;pointer-events:none;`;
+      const _cw=card.offsetWidth||48;
+      const _ch=card.offsetHeight||66;
+      card.style.cssText=`position:fixed;width:${_cw}px;height:${_ch}px;left:${e.clientX-ox}px;top:${e.clientY-oy}px;z-index:9999;pointer-events:none;`;
       document.body.appendChild(card);
       hilite();
     };
