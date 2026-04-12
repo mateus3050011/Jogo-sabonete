@@ -445,6 +445,7 @@ body::after{
 .dcard{position:relative;top:auto;left:auto;pointer-events:none;cursor:default;}
 
 #hand-wrap{display:none;flex-direction:column;align-items:center;gap:3px;}
+#hand-wrap.visible{display:flex;}
 #hand-card-wrap{position:relative;width:48px;height:66px;flex-shrink:0;}
 
 #msg{
@@ -772,7 +773,7 @@ const Disc={
     const el=document.getElementById('disc');
     el.innerHTML=''; el.classList.remove('ok');
     if(!this.pile.length){
-      el.innerHTML='<span style="font-size:9px;color:var(--mint-l);font-weight:700">vazio</span>';
+      el.innerHTML='<span style="font-size:11px;color:rgba(200,190,180,.35);">—</span>';
       return;
     }
     const {v,s}=this.top();
@@ -957,9 +958,10 @@ const G={
     if(SharedDeck.count===0){
       if(!Disc.pile.length){ this._msg('Monte e descarte vazios!'); return; }
       this._recycleDiscard();
+      if(SharedDeck.count===0) return;
     }
     const c=SharedDeck.draw();
-    if(!c) return;
+    if(!c){ this._msg('Monte vazio!'); return; }
     this._humanDrawn(c.v, c.s);
   },
 
@@ -975,6 +977,7 @@ const G={
   },
 
   _recycleDiscard(){
+    if(!Disc.pile.length){ this._msg('Descarte vazio, nao e possivel reciclar.'); return; }
     const cards=[...Disc.pile].reverse();
     Disc.reset();
     SharedDeck.reset(shuffle(cards));
@@ -1048,7 +1051,7 @@ const G={
       return;
     }
 
-    // CPU tenta pegar do descarte se útil
+    // CPU tenta pegar do descarte se util
     const top=Disc.top();
     if(top && !this.cpu.slots[top.v]?.done){
       const c=Disc.pop();
@@ -1057,8 +1060,23 @@ const G={
     }
 
     // saca do monte
-    if(SharedDeck.count===0) this._recycleDiscard();
+    if(SharedDeck.count===0){
+      if(!Disc.pile.length){
+        // sem cartas em lugar nenhum: volta para o jogador
+        this.myTurn=true; this.busy=false;
+        this._updateDiscTakeable(true);
+        this._msg('Monte vazio! Sua vez. 🛁');
+        return;
+      }
+      this._recycleDiscard();
+    }
     const c=SharedDeck.draw();
+    if(!c){
+      this.myTurn=true; this.busy=false;
+      this._updateDiscTakeable(true);
+      this._msg('Monte vazio! Sua vez. 🛁');
+      return;
+    }
     setTimeout(()=>this._cpuPlay(c.v,c.s), 1200);
   },
 
@@ -1088,6 +1106,7 @@ const G={
         this._msg('CPU continua...');
         setTimeout(()=>this._cpuTurn(expelled), 1100);
       } else {
+        // expelled null: slot nao tinha carta oculta, saca nova do monte
         this._msg('CPU jogando...');
         setTimeout(()=>this._cpuTurn(null), 1100);
       }
@@ -1098,7 +1117,7 @@ const G={
   _showHand(v,s,mode){
     const wrap=document.getElementById('hand-card-wrap');
     wrap.innerHTML='';
-    document.getElementById('hand-wrap').style.display='flex';
+    document.getElementById('hand-wrap').classList.add('visible');
     const card=mkCard(v,s,false);
     card.classList.add('live');
     card.style.cssText='position:absolute;top:0;left:0;';
@@ -1107,7 +1126,7 @@ const G={
   },
 
   _hideHand(){
-    document.getElementById('hand-wrap').style.display='none';
+    document.getElementById('hand-wrap').classList.remove('visible');
     document.getElementById('hand-card-wrap').innerHTML='';
     this.p._clearHi();
     document.getElementById('disc').classList.remove('ok');
