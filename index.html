@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Sabonete</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -445,7 +445,6 @@ body::after{
 .dcard{position:relative;top:auto;left:auto;pointer-events:none;cursor:default;}
 
 #hand-wrap{display:none;flex-direction:column;align-items:center;gap:3px;}
-#hand-wrap.visible{display:flex;}
 #hand-card-wrap{position:relative;width:48px;height:66px;flex-shrink:0;}
 
 #msg{
@@ -585,10 +584,13 @@ body::after{
 ═══════════════════════════════ */
 @media (max-width: 500px){
   :root{
-    --cw: clamp(32px, calc((100vw - 28px) / 5), 48px);
+    --cw: clamp(30px, calc((100vw - 28px) / 5), 48px);
     --ch: calc(var(--cw) * 1.375);
     --gap-row: clamp(2px, 1vw, 5px);
   }
+  /* garante que o jogo cabe na tela sem scroll */
+  body{ height:100dvh; }
+  #table{ height:100dvh; }
 
   /* cartas e slots escalam juntos */
   .slot{
@@ -773,7 +775,7 @@ const Disc={
     const el=document.getElementById('disc');
     el.innerHTML=''; el.classList.remove('ok');
     if(!this.pile.length){
-      el.innerHTML='<span style="font-size:11px;color:rgba(200,190,180,.35);">—</span>';
+      el.innerHTML='<span style="font-size:9px;color:var(--mint-l);font-weight:700">vazio</span>';
       return;
     }
     const {v,s}=this.top();
@@ -958,10 +960,9 @@ const G={
     if(SharedDeck.count===0){
       if(!Disc.pile.length){ this._msg('Monte e descarte vazios!'); return; }
       this._recycleDiscard();
-      if(SharedDeck.count===0) return;
     }
     const c=SharedDeck.draw();
-    if(!c){ this._msg('Monte vazio!'); return; }
+    if(!c) return;
     this._humanDrawn(c.v, c.s);
   },
 
@@ -977,7 +978,6 @@ const G={
   },
 
   _recycleDiscard(){
-    if(!Disc.pile.length){ this._msg('Descarte vazio, nao e possivel reciclar.'); return; }
     const cards=[...Disc.pile].reverse();
     Disc.reset();
     SharedDeck.reset(shuffle(cards));
@@ -1051,7 +1051,7 @@ const G={
       return;
     }
 
-    // CPU tenta pegar do descarte se util
+    // CPU tenta pegar do descarte se útil
     const top=Disc.top();
     if(top && !this.cpu.slots[top.v]?.done){
       const c=Disc.pop();
@@ -1060,23 +1060,8 @@ const G={
     }
 
     // saca do monte
-    if(SharedDeck.count===0){
-      if(!Disc.pile.length){
-        // sem cartas em lugar nenhum: volta para o jogador
-        this.myTurn=true; this.busy=false;
-        this._updateDiscTakeable(true);
-        this._msg('Monte vazio! Sua vez. 🛁');
-        return;
-      }
-      this._recycleDiscard();
-    }
+    if(SharedDeck.count===0) this._recycleDiscard();
     const c=SharedDeck.draw();
-    if(!c){
-      this.myTurn=true; this.busy=false;
-      this._updateDiscTakeable(true);
-      this._msg('Monte vazio! Sua vez. 🛁');
-      return;
-    }
     setTimeout(()=>this._cpuPlay(c.v,c.s), 1200);
   },
 
@@ -1106,7 +1091,6 @@ const G={
         this._msg('CPU continua...');
         setTimeout(()=>this._cpuTurn(expelled), 1100);
       } else {
-        // expelled null: slot nao tinha carta oculta, saca nova do monte
         this._msg('CPU jogando...');
         setTimeout(()=>this._cpuTurn(null), 1100);
       }
@@ -1117,7 +1101,7 @@ const G={
   _showHand(v,s,mode){
     const wrap=document.getElementById('hand-card-wrap');
     wrap.innerHTML='';
-    document.getElementById('hand-wrap').classList.add('visible');
+    document.getElementById('hand-wrap').style.display='flex';
     const card=mkCard(v,s,false);
     card.classList.add('live');
     card.style.cssText='position:absolute;top:0;left:0;';
@@ -1126,7 +1110,7 @@ const G={
   },
 
   _hideHand(){
-    document.getElementById('hand-wrap').classList.remove('visible');
+    document.getElementById('hand-wrap').style.display='none';
     document.getElementById('hand-card-wrap').innerHTML='';
     this.p._clearHi();
     document.getElementById('disc').classList.remove('ok');
@@ -1168,20 +1152,23 @@ const G={
     const onDown=(e)=>{
       e.preventDefault();
       dragging=true;
+      const pt=e.touches?e.touches[0]:e;
       const r=card.getBoundingClientRect();
-      ox=e.clientX-r.left; oy=e.clientY-r.top;
+      ox=pt.clientX-r.left; oy=pt.clientY-r.top;
       card.classList.add('drag');
       const _cw=card.offsetWidth||48;
       const _ch=card.offsetHeight||66;
-      card.style.cssText=`position:fixed;width:${_cw}px;height:${_ch}px;left:${e.clientX-ox}px;top:${e.clientY-oy}px;z-index:9999;pointer-events:none;`;
+      card.style.cssText=`position:fixed;width:${_cw}px;height:${_ch}px;left:${pt.clientX-ox}px;top:${pt.clientY-oy}px;z-index:9999;pointer-events:none;`;
       document.body.appendChild(card);
       hilite();
     };
 
     const onMove=(e)=>{
       if(!dragging) return;
-      card.style.left=(e.clientX-ox)+'px';
-      card.style.top =(e.clientY-oy)+'px';
+      e.preventDefault();
+      const pt=e.touches?e.touches[0]:e;
+      card.style.left=(pt.clientX-ox)+'px';
+      card.style.top =(pt.clientY-oy)+'px';
     };
 
     const onUp=(e)=>{
@@ -1191,13 +1178,16 @@ const G={
       // remove listeners imediatamente para evitar duplo disparo
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup',   onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onUp);
 
       card.classList.remove('drag');
       card.style.pointerEvents='auto';
 
       // hit-test: esconde carta, pega elemento abaixo
+      const _pt=e.changedTouches?e.changedTouches[0]:e;
       card.style.visibility='hidden';
-      const below=document.elementFromPoint(e.clientX, e.clientY);
+      const below=document.elementFromPoint(_pt.clientX, _pt.clientY);
       card.style.visibility='';
 
       this.p._clearHi();
@@ -1229,8 +1219,11 @@ const G={
         document.getElementById('hand-card-wrap').appendChild(card);
         hilite();
         card.onmousedown=onDown;
+        card.addEventListener('touchstart', onDown, {passive:false});
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup',   onUp);
+        document.addEventListener('touchmove', onMove, {passive:false});
+        document.addEventListener('touchend',  onUp);
         G._msg(`Coloque o ${v} no slot primeiro!`);
       } else {
         // devolve à mão
@@ -1239,14 +1232,20 @@ const G={
         hilite();
         // re-registra listeners
         card.onmousedown=onDown;
+        card.addEventListener('touchstart', onDown, {passive:false});
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup',   onUp);
+        document.addEventListener('touchmove', onMove, {passive:false});
+        document.addEventListener('touchend',  onUp);
       }
     };
 
     card.onmousedown=onDown;
+    card.addEventListener('touchstart', onDown, {passive:false});
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup',   onUp);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('touchend',  onUp);
   },
 
   _fim(quem){
